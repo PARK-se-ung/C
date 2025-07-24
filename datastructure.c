@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdbool.h>
 
 /*
@@ -324,7 +325,7 @@ int pop(Stack *stack, bool *err) {
       - key -> hash function -> index -> array -> value 
      ! Hash Collision
       - 서로 다른 키가 hash function에 의해 같은 index값을 가지는 경우 발생 << 해결필요
-       1) 개별 체이닝(Seprate Chaining)
+       1) 개별 체이닝(Seperate Chaining)
         - 동일 index에 자료구조(Linked List)를 두고 여러 요소 저장
         - 배열에 남은 공간이 없어도 저장 가능
         - 탐색시간 O(n) 가능성 존재
@@ -332,9 +333,16 @@ int pop(Stack *stack, bool *err) {
         - Linear Probing(선형 탐사) : index 순차 탐색
         - Quadratic Probing(이차 탐사) : i^2 단위 탐색
         - Double Hashing(더블 해싱) : 두개의 hash function 사용
+         >> 구현의 용이성, 캐시 성능, 탐색 루프 + 디버깅 용이의 이유로 선형 탐사가 주로 사용됨
+           ! 선형탐사 << 클러스터링 현상 발생 가능; 한 인덱스에 충돌이 몰리는 경우 여러 key들에 대해 충돌이 발생하여 탐색 성능 저하
      ! hashable vs mutable
        - hashable vs mutable : hash function 적용 가능 + key->hash가 bijective인 객체 vs 가변 객체(내부값 수정시 해시값 달라질 수 있음)
        - hashing할 key는 기본적으로 불변(immutable)할 필요 있음 << mutable한 값은 key로 사용 제한 필요(Python 등에서는 사용 불가)
+     ! Set vs Dictionary
+      1) 저장 구조: key만 저장 vs key:value쌍 저장
+      2) 주요 기능: 중복없이 저장/추가/삭제/탐색 vs key로 value 접근 + key기반 값 설정/검색/삭제
+      3) 중복 허용: key 중복 불가 vs key 중복 불가 + value 중복 가능
+      ! Set/Dictionary << key를 통한 빠른 탐색(O(1)) 가능
 */
 
 // Hashing Function(djb2)
@@ -347,7 +355,7 @@ unsigned long hash(const char* str) {
     return hash;
 };
 
-// Hash Table(Chaining 방식)
+// Hash Table(Chaining 방식/key:value 방식)
 typedef struct {
     char* key;
     int value;
@@ -359,17 +367,124 @@ typedef struct {
     size_t capacity;
 } HashTable;
 
-void set(HashTable *hash_table, char* key, int value) {
-
+HashTable *init(size_t capacity) {
+    HashTable *hash_table = malloc(sizeof(HashTable));
+    if(hash_table == NULL) return NULL;
+    hash_table->entry = malloc(sizeof(Entry*) * capacity);
+    if(hash_table->entry == NULL) {
+        free(hash_table);
+        return NULL;
+    }
+    for(size_t i = 0; i < capacity; i++) {
+        hash_table->entry[i] = NULL;
+    }
+    hash_table->capacity = capacity;
+    return hash_table;
 }
 
-int get(HashTable *hash_table, char* key) {
+void set(HashTable *ht, const char* key, int value) {
+    size_t index = hash(key) % ht->capacity;
+    Entry *entry = ht->entry[index];
+    while(entry != NULL) {
+        if(strcmp(entry->key, key) == 0) {
+            entry->value = value;
+            return;
+        }
+        entry = entry->next;
+    }
 
+    Entry *new_entry = malloc(sizeof(Entry));
+    if(new_entry == NULL) return;
+    new_entry->key = strdup(key);
+    new_entry->value = value;
+    new_entry->next = ht->entry[index];
+    ht->entry[index] = new_entry;
 }
 
-void remove(HashTable *hash_table, char* key) {
-    
+bool get(HashTable *ht, const char* key, int *value) {
+    size_t index = hash(key) % ht->capacity;
+    Entry *entry = ht->entry[index];
+    while(entry != NULL) {
+        if(strcmp(entry->key, key) == 0) {
+            if(value) *value = entry->value;
+            return true;
+        }
+        entry = entry->next;
+    }
+    return false;    
 }
+
+bool remove(HashTable *ht, const char* key) {
+    size_t index = hash(key) % ht->capacity;
+    Entry *entry = ht->entry[index];
+    Entry *prev = NULL;
+    while(entry != NULL) {
+        if(strcmp(entry->key, key) == 0) {
+            if(prev == NULL) {
+                ht->entry[index] = entry->next;
+            } else {
+                prev->next = entry->next;
+            }
+            free(entry->key);
+            free(entry);
+            return true;
+        }
+        prev = entry;
+        entry = entry->next;
+    }
+    return false;
+}
+
+void free_ht(HashTable *ht) {
+    for (int i = 0; i < ht->capacity; i++) {
+        Entry *entry = ht->entry[i];
+        while (entry != NULL) {
+            Entry *next = entry->next;
+            free(entry->key);
+            free(entry);
+            entry = next;
+        }
+    }
+    free(ht->entry);
+    free(ht);
+}
+
+typedef enum {
+    EMPTY,
+    OCCUPIED,
+    DELETED
+} Status;
+
+typedef struct {
+    char* key;
+    Status status;
+} Slot;
+
+// Set(open addressing/key only방식)
+typedef struct {
+    Slot *table;
+    size_t capacity;
+    size_t size;
+} Set;
+
+Set* init_set(size_t capacity) {
+    Set *set = malloc(sizeof(Set));
+    if(set == NULL) return NULL;
+    set->table = malloc(sizeof(Slot) * capacity);
+    if(set->table == NULL) {
+        free(set);
+        return NULL;
+    }
+    set->capacity = capacity;
+    set->size = 0;
+    return set;
+}
+
+bool insert(Set* set, const char *key) {
+    if(set == NULL) return false;
+    size_t index = hash(key);
+}
+
 /*
     5. Tree/Heap
 */
