@@ -482,7 +482,7 @@ Set* init_set(size_t capacity) {
 
 bool insert(Set* set, const char *key) {
     if(set == NULL) return false;
-    size_t index = hash(key);
+    size_t index = hash(key) % set->capacity;
 }
 
 /*
