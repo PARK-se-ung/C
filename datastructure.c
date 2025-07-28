@@ -471,13 +471,13 @@ Set* init_set(size_t capacity) {
     Set *set = malloc(sizeof(Set));
     if(set == NULL) return NULL;
     set->table = malloc(sizeof(Slot) * capacity);
-    for(size_t i = 0; i < capacity; i++){
-        set->table[i].key = malloc(sizeof(char) * 50); // 모든 key의 길이가 50 미만이라고 가정
-        set->table[i].status = EMPTY;
-    }
     if(set->table == NULL) {
         free(set);
         return NULL;
+    }
+    for(size_t i = 0; i < capacity; i++){
+        set->table[i].key = NULL;
+        set->table[i].status = EMPTY;
     }
     set->capacity = capacity;
     set->size = 0;
@@ -485,31 +485,66 @@ Set* init_set(size_t capacity) {
 }
 
 bool insert(Set* set, const char *key) {
-    if(set == NULL) return false;
+    if(set == NULL || key == NULL) return false;
     size_t index = hash(key) % set->capacity;
-    if(set->table[index].status == EMPTY) {
-        set->table[index].status = OCCUPIED;
-        strcpy(set->table[index].key, key);
-        return true;
-    } else {
+    size_t start = index;
+    size_t delete_index = SIZE_MAX;
+    while(set->table[index].status != EMPTY) {
+        if(set->table[index].status == OCCUPIED && 
+            (set->table[index].key, key) == 0) return false;
+        if(set->table[index].status == DELETED && delete_index == SIZE_MAX) {
+            delete_index = index;
+        }
 
+        index = (index + 1) % set->capacity;
+        if(start == index) break;
     }
-    return false;
+    if(delete_index != SIZE_MAX) index = delete_index;
+    set->table[index].status = OCCUPIED;
+    strcpy(set->table[index].key, key);
+    set->size++;
+    return true;
 }
 
 bool contains(Set* set, const char* key) {
     if(set == NULL) return false;
     size_t index = hash(key) % set -> capacity;
-    
+    size_t start = index;
+    while(set->table[index].status != EMPTY) {
+        if(set->table[index].status == OCCUPIED && 
+            strcmp(set->table[index].key, key) == 0) {
+                return true;
+            }
+        index = (index + 1) % set->capacity;
+        if(start == index) break;
+    }
+    return false;
 
 }
 
 bool delete(Set* set, const char* key) {
-
+    if(set == NULL) return false;
+    size_t index = hash(key) % set -> capacity;
+    size_t start = index;
+    while(set->table[index].status != EMPTY) {
+        if(set->table[index].status == OCCUPIED &&
+            strcmp(set->table[index].key, key) == 0) {
+            set->table[index].status = DELETED;
+            free(set->table[index].key);
+            set->size--;
+            return true;
+        }
+        index = (index + 1) % set->capacity;
+        if(start == index) break;
+    }
+    return false;
 }
 
 void free_set(Set* set){
     if(set == NULL) return;
+    for(size_t i = 0; i < set->capacity; i++){
+        free(set->table[i].key);
+    }
     free(set->table);
     free(set);
 }
