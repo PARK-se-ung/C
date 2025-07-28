@@ -471,6 +471,10 @@ Set* init_set(size_t capacity) {
     Set *set = malloc(sizeof(Set));
     if(set == NULL) return NULL;
     set->table = malloc(sizeof(Slot) * capacity);
+    for(size_t i = 0; i < capacity; i++){
+        set->table[i].key = malloc(sizeof(char) * 50); // 모든 key의 길이가 50 미만이라고 가정
+        set->table[i].status = EMPTY;
+    }
     if(set->table == NULL) {
         free(set);
         return NULL;
@@ -483,6 +487,31 @@ Set* init_set(size_t capacity) {
 bool insert(Set* set, const char *key) {
     if(set == NULL) return false;
     size_t index = hash(key) % set->capacity;
+    if(set->table[index].status == EMPTY) {
+        set->table[index].status = OCCUPIED;
+        strcpy(set->table[index].key, key);
+        return true;
+    } else {
+
+    }
+    return false;
+}
+
+bool contains(Set* set, const char* key) {
+    if(set == NULL) return false;
+    size_t index = hash(key) % set -> capacity;
+    
+
+}
+
+bool delete(Set* set, const char* key) {
+
+}
+
+void free_set(Set* set){
+    if(set == NULL) return;
+    free(set->table);
+    free(set);
 }
 
 /*
