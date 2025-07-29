@@ -476,7 +476,6 @@ Set* init_set(size_t capacity) {
         return NULL;
     }
     for(size_t i = 0; i < capacity; i++){
-        set->table[i].key = NULL;
         set->table[i].status = EMPTY;
     }
     set->capacity = capacity;
@@ -491,7 +490,7 @@ bool insert(Set* set, const char *key) {
     size_t delete_index = SIZE_MAX;
     while(set->table[index].status != EMPTY) {
         if(set->table[index].status == OCCUPIED && 
-            (set->table[index].key, key) == 0) return false;
+            strcmp(set->table[index].key, key) == 0) return false;
         if(set->table[index].status == DELETED && delete_index == SIZE_MAX) {
             delete_index = index;
         }
@@ -500,14 +499,16 @@ bool insert(Set* set, const char *key) {
         if(start == index) break;
     }
     if(delete_index != SIZE_MAX) index = delete_index;
-    set->table[index].status = OCCUPIED;
+    set->table[index].key = malloc(sizeof(char) * strlen(key) + 1);
+    if(set->table[index].key == NULL) return false;
     strcpy(set->table[index].key, key);
+    set->table[index].status = OCCUPIED;
     set->size++;
     return true;
 }
 
 bool contains(Set* set, const char* key) {
-    if(set == NULL) return false;
+    if(set == NULL || key == NULL) return false;
     size_t index = hash(key) % set -> capacity;
     size_t start = index;
     while(set->table[index].status != EMPTY) {
@@ -543,7 +544,9 @@ bool delete(Set* set, const char* key) {
 void free_set(Set* set){
     if(set == NULL) return;
     for(size_t i = 0; i < set->capacity; i++){
-        free(set->table[i].key);
+        if(set->table[i].key != NULL && set->table[i].status == OCCUPIED) {
+            free(set->table[i].key);
+        }
     }
     free(set->table);
     free(set);
@@ -551,6 +554,10 @@ void free_set(Set* set){
 
 /*
     5. Tree/Heap
+     1) tree? 계층 구조를 가지는 비선형 자료구조
+       ! 특징: 
+
+
 */
 
 /*
