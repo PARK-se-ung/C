@@ -552,18 +552,6 @@ void free_set(Set* set){
     free(set);
 }
 
-/*
-    5. Tree/Heap
-     1) tree? 계층 구조를 가지는 비선형 자료구조
-       ! 특징: 
-
-
-*/
-
-/*
-    6. Graph(adjust list/matrix)
-*/
-
 
 int main() {
     
