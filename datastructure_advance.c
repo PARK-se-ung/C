@@ -59,26 +59,76 @@ BinarySearchTree* init_bst() {
     bst->size = 0;
     return bst;
 }
-bool insert(BinarySearchTree *bst, int value) {
-    if(bst == NULL || value == NULL) return false;
-    Node *node = create_node(value);
-    if(node == NULL) return false;
 
-    if(bst->root == NULL) {
-        bst->root = node;
-    } else {
-
+Node* insert_node(Node* root, int value, bool *inserted) {
+    if(root == NULL) {
+        *inserted = true;
+        return create_node(value);
     }
-    bst->size++;
-    return true;
+    if(value < root->value) {
+        root->left = insert_node(root->left, value, inserted);
+    } else if(value > root->value) {
+        root->right = insert_node(root->right, value, inserted);
+    } else {
+        *inserted = false;
+    }
+    return root;
 }
 
-Node* search(BinarySearchTree *tree, int value) {
+bool insert(BinarySearchTree *bst, int value) {
+    if(bst == NULL) return false;
+    bool inserted = false;
+    bst->root = insert_node(bst->root, value, &inserted);
+    if(inserted) bst->size++;
+    return inserted;
+}
+
+Node* search_node(Node* root, int value) {
+    if(root == NULL) return NULL;
+    if(value < root->value) return search_node(root->left, value);
+    else if(value > root->value) return search_node(root->right, value);
+    return root;
+}
+
+Node* search(BinarySearchTree *bst, int value) {
+    if(bst == NULL) return NULL;    
+    return search_node(bst->root, value);
+}
+
+Node* find_min(Node *node) {
+    if(node == NULL) return NULL;
+    while(!node->left) {
+        node = node->left;
+    }
+    return node;
 
 }
 
-bool delete(BinarySearchTree *tree, int value) {
+Node* delete_node(Node *root, int value) {
+    if(root == NULL) return NULL;
+    if(value < root->value) return delete_node(root->left, value);
+    else if(value > root->value) return delete_node(root->right, value);
+    else {
+        if(root->left == NULL) {
+            Node* temp = root->right;
+            free(root);
+            return temp;
+        } else if(root->right == NULL) {
+            Node* temp = root->left;
+            free(root);
+            return temp;
+        } else {
+            Node* minNode = find_min(root->right);
+            root->value = minNode->value;
+            root->right = delete_node(root->right, minNode->value);
+        }
+    }
+    return root;
+}
 
+bool delete(BinarySearchTree *bst, int value) {
+    if(bst == NULL) return false;
+    
 }
 
 void preorder(Node *node) {
@@ -94,12 +144,12 @@ void postorder(Node *node) {
 }
 
 void free_tree(Node *node) {
-
+ 
 }
 
 
 /*
-    6. Graph(adjust list/matrix)
+    6. Graph
 */
 
 
